@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0f1c">
+<title>AI Smart Traffic System - Gujarat</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+:root{
+  --bg:#0a0f1c;
+  --primary:#38bdf8;
+  --admin:#fbbf24;
+  --success:#34d399;
+  --danger:#ef4444;
+  --warn:#facc15;
+  --card:rgba(255,255,255,.06);
+  --card2:rgba(255,255,255,.09);
+  --stroke:rgba(255,255,255,.12);
+  --txt:#e6eefc;
+  --muted:#8aa0c0;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Outfit',system-ui,-apple-system,sans-serif}
+html,body{height:100%}
+body{background:var(--bg);color:var(--txt);overflow:hidden;-webkit-tap-highlight-color:transparent}
+a{cursor:pointer;text-decoration:none;color:var(--primary)}
+.hidden{display:none!important}
+.glass{background:var(--card);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--stroke);border-radius:18px}
+input,select,textarea{width:100%;padding:12px 14px;margin:6px 0;border-radius:12px;border:1px solid var(--stroke);background:rgba(255,255,255,.05);color:var(--txt);font-size:14px;outline:none;transition:.2s}
+input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(56,189,248,.18)}
+input::placeholder{color:var(--muted)}
+select option{background:#0a0f1c}
+button{cursor:pointer;font-family:inherit;font-size:14px;border:none;border-radius:12px;transition:.2s}
+.btn{padding:12px 16px;width:100%;font-weight:600;color:#04121f;background:linear-gradient(135deg,#38bdf8,#818cf8);box-shadow:0 8px 22px rgba(56,189,248,.28)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(56,189,248,.4)}
+.btn.ghost{background:rgba(255,255,255,.07);color:var(--txt);border:1px solid var(--stroke);box-shadow:none}
+.btn.danger{background:linear-gradient(135deg,#ef4444,#f97316);color:#fff}
+.btn.gold{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#241a00}
+.btn.sm{padding:9px 12px;width:auto;font-size:13px}
+
+/* ===== AUTH ===== */
+#authScreen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto;
+  background:radial-gradient(900px 600px at 15% 10%,rgba(56,189,248,.16),transparent 60%),
+             radial-gradient(700px 500px at 90% 90%,rgba(129,140,248,.16),transparent 60%),var(--bg);}
+.authCard{width:100%;max-width:420px;padding:30px 26px}
+.brand{font-size:26px;font-weight:800;letter-spacing:.3px;text-align:center}
+.brand span{color:var(--primary)}
+.sub{text-align:center;color:var(--muted);font-size:13px;margin:6px 0 22px}
+.rowlinks{display:flex;justify-content:space-between;font-size:13px;margin-top:14px;color:var(--muted)}
+.rowlinks a{color:var(--primary)}
+.field-label{font-size:12px;color:var(--muted);margin-top:10px;display:block}
+.note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
+
+/* ===== APP SHELL ===== */
+#app{display:flex;height:100%}
+#sidebar{width:220px;flex:0 0 220px;background:linear-gradient(180deg,#0e1626,#0a0f1c);border-right:1px solid var(--stroke);
+  display:flex;flex-direction:column;padding:18px 12px;transition:.25s;z-index:2000;box-shadow:4px 0 24px rgba(0,0,0,.45)}
+#sidebar .logo{font-size:26px;text-align:center;margin-bottom:18px}
+#sidebar nav{display:flex;flex-direction:column;gap:6px;flex:1}
+#sidebar nav a,#sidebar .logout{display:flex;align-items:center;gap:12px;padding:12px 12px;border-radius:12px;color:var(--txt);font-size:14px;font-weight:500}
+#sidebar nav a:hover,#sidebar .logout:hover{background:rgba(56,189,248,.12)}
+#sidebar nav a.active{background:linear-gradient(135deg,rgba(56,189,248,.28),rgba(129,140,248,.2));box-shadow:inset 0 0 0 1px rgba(56,189,248,.4)}
+#sidebar .logout{margin-top:10px;color:#ffb4b4}
+main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
+.topbar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(10,15,28,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--stroke);position:relative;z-index:1200}
+#menuBtn{display:none;background:rgba(255,255,255,.07);color:var(--txt);padding:9px 12px;font-size:16px;border:1px solid var(--stroke)}
+.searchWrap{display:flex;flex:1;max-width:520px;gap:8px}
+.searchWrap input{margin:0}
+.searchWrap button{padding:0 16px;background:linear-gradient(135deg,#38bdf8,#818cf8);color:#04121f;font-size:16px}
+.badge{margin-left:auto;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.4);white-space:nowrap}
+.badge.admin{background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.5);color:var(--admin)}
+.badge.police{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.5);color:#ff9a9a}
+.badge.staff{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.5);color:var(--success)}
+
+.page{display:none;flex:1;overflow:auto;position:relative}
+.page.active{display:block}
+#map{position:absolute;inset:0;width:100%;height:100%;background:#0a0f1c;z-index:0}
+.page#page-home{overflow:hidden}
+.mapbtns{position:absolute;right:14px;bottom:90px;display:flex;flex-direction:column;gap:10px;z-index:900}
+.mapbtns button{width:48px;height:48px;border-radius:14px;font-size:20px;background:rgba(10,15,28,.85);color:var(--txt);border:1px solid var(--stroke);backdrop-filter:blur(10px)}
+.mapbtns button:hover{background:rgba(56,189,248,.25)}
+.leaflet-container{background:#0a0f1c!important;font-family:inherit}
+.legend{position:absolute;left:14px;bottom:24px;z-index:900;padding:12px 14px;font-size:12px;background:rgba(10,15,28,.85);backdrop-filter:blur(10px);border:1px solid var(--stroke);border-radius:14px}
+.legend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px}
+
+/* pulsing GPS dot */
+.pulse-dot{width:16px;height:16px;border-radius:50%;background:#38bdf8;box-shadow:0 0 0 0 rgba(56,189,248,.7);animation:pulse 1.8s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(56,189,248,.6)}70%{box-shadow:0 0 0 22px rgba(56,189,248,0)}100%{box-shadow:0 0 0 0 rgba(56,189,248,0)}}
+
+/* blinking emergency line */
+.blink{animation:blink 1s linear infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+
+/* ===== PANELS ===== */
+.pad{padding:22px;max-width:900px;margin:0 auto}
+.pad h2{font-size:20px;margin-bottom:4px}
+.pad .desc{color:var(--muted);font-size:13px;margin-bottom:18px}
+.card{padding:18px;margin-bottom:16px}
+.card h3{font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.chip{padding:9px 14px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--stroke);font-size:13px;cursor:pointer}
+.chip.active{background:linear-gradient(135deg,rgba(56,189,248,.3),rgba(129,140,248,.25));border-color:var(--primary)}
+.list{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow:auto}
+.list .row{display:flex;align-items:center;gap:10px;padding:11px 13px;background:rgba(255,255,255,.045);border:1px solid var(--stroke);border-radius:12px;font-size:13px}
+.list .row b{font-weight:600}
+.list .row .meta{margin-left:auto;color:var(--muted);font-size:12px;text-align:right}
+#emap{height:300px;border-radius:14px;overflow:hidden;border:1px solid var(--stroke);margin:8px 0}
+#camFeed{width:100%;max-height:60vh;background:#000;border-radius:14px;border:1px solid var(--stroke);object-fit:contain;display:block}
+.stat{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0}
+.stat .box{flex:1;min-width:120px;padding:14px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid var(--stroke)}
+.stat .box .n{font-size:22px;font-weight:800;color:var(--primary)}
+.stat .box .l{font-size:12px;color:var(--muted)}
+
+/* toast + modal */
+#toasts{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{padding:12px 18px;border-radius:12px;background:rgba(10,15,28,.95);border:1px solid var(--stroke);font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:slidein .25s ease}
+.toast.ok{border-color:rgba(52,211,153,.6)}
+.toast.err{border-color:rgba(239,68,68,.6)}
+.toast.alert{border-color:rgba(239,68,68,.8);background:rgba(60,8,8,.95);font-weight:600}
+@keyframes slidein{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px}
+#modal .box{max-width:380px;width:100%;padding:24px;text-align:center}
+#modal .box h3{font-size:18px;margin-bottom:8px}
+#modal .box p{color:var(--muted);font-size:14px;margin-bottom:18px}
+#modal .actions{display:flex;gap:10px}
+
+/* ===== MOBILE ===== */
+@media(max-width:760px){
+  #sidebar{position:fixed;left:0;top:0;bottom:0;width:230px;flex-basis:230px;transform:translateX(-100%);box-shadow:0 0 60px rgba(0,0,0,.6)}
+  #sidebar.open{transform:none}
+  #menuBtn{display:block}
+  #sidebar span{display:inline}
+  .grid2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= AUTH SCREEN ================= -->
+<div id="authScreen">
+  <div class="authCard glass">
+    <div class="brand">🚦 AI Smart <span>Traffic</span></div>
+    <div class="sub">ગુજરાત સ્માર્ટ ટ્રાફિક મેનેજમેન્ટ સિસ્ટમ</div>
+
+    <!-- Single login box -->
+    <div id="loginBox">
+      <span class="field-label">ઈમેલ / રજિસ્ટ્રેશન નંબર</span>
+      <input id="loginId" autocomplete="username" placeholder="ઈમેલ અથવા રજિસ્ટ્રેશન નંબર">
+      <span class="field-label">પાસવર્ડ</span>
+      <input id="loginPw" type="password" autocomplete="current-password" placeholder="પાસવર્ડ" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="btn" onclick="doLogin()">લોગિન કરો</button>
+      <div class="rowlinks">
+        <a onclick="showBox('register')">નવો યુઝર? રજિસ્ટર કરો</a>
+        <a onclick="showBox('changepw')">પાસવર્ડ બદલો</a>
+      </div>
+    </div>
+
+    <!-- Registration -->
+    <div id="registerBox" class="hidden">
+      <span class="field-label">પૂરું નામ</span>
+      <input id="regName" placeholder="તમારું નામ">
+      <span class="field-label">ઈમેલ</span>
+      <input id="regEmail" type="email" placeholder="you@example.com">
+      <span class="field-label">ફોન નંબર</span>
+      <input id="regPhone" type="tel" placeholder="9876543210">
+      <span class="field-label">પાસવર્ડ</span>
+      <input id="regPw" type="password" placeholder="પાસવર્ડ બનાવો">
+      <button class="btn" onclick="doRegister()">રજિસ્ટર કરો</button>
+      <div class="rowlinks"><a onclick="showBox('login')">← પાછા જાઓ</a></div>
+      <p class="note">નોંધણી પછી તમને આપમેળે REG-XXXX ઓળખ નંબર મળશે.</p>
+    </div>
+
+    <!-- Change password -->
+    <div id="changepwBox" class="hidden">
+      <span class="field-label">ઈમેલ / રજિસ્ટ્રેશન નંબર</span>
+      <input id="cpId" placeholder="ઈમેલ અથવા રજિસ્ટ્રેશન નંબર">
+      <span class="field-label">નવો પાસવર્ડ</span>
+      <input id="cpNew" type="password" placeholder="નવો પાસવર્ડ">
+      <span class="field-label">નવો પાસવર્ડ (ફરી)</span>
+      <input id="cpNew2" type="password" placeholder="નવો પાસવર્ડ ફરી લખો">
+      <button class="btn" onclick="doChangePw()">પાસવર્ડ સેવ કરો</button>
+      <div class="rowlinks"><a onclick="showBox('login')">← પાછા જાઓ</a></div>
+    </div>
+
+    <!-- Firebase config override -->
+  </div>
+</div>
+
+<!-- ================= MAIN APP ================= -->
+<div id="app" class="hidden">
+  <aside id="sidebar">
+    <div class="logo">🚦</div>
+    <nav>
+      <a data-page="home" onclick="go('home')">🗺️ <span>નકશો</span></a>
+      <a data-page="emergency" onclick="go('emergency')">🚑 <span>ઇમરજન્સી</span></a>
+      <a data-page="camera" onclick="go('camera')">📹 <span>કેમેરા</span></a>
+      <a data-page="admin" onclick="go('admin')">⚙️ <span>એડમિન પેનલ</span></a>
+    </nav>
+    <a class="logout" onclick="logout()">⎋ <span>લોગ આઉટ</span></a>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <button id="menuBtn" onclick="toggleSidebar()">☰</button>
+      <div class="searchWrap">
+        <input id="searchInput" placeholder="શહેર / ગામ શોધો..." onkeydown="if(event.key==='Enter')doSearch()">
+        <button onclick="doSearch()">🔍</button>
+      </div>
+      <span id="roleBadge" class="badge">—</span>
+    </header>
+
+    <!-- HOME / MAP -->
+    <section id="page-home" class="page active">
+      <div id="map"></div>
+      <div class="mapbtns">
+        <button id="btnTile" onclick="toggleTiles()" title="Satellite / Normal">🛰️</button>
+        <button id="btnLoc" onclick="flyToMe()" title="My Location">📍</button>
+      </div>
+      <div class="legend">
+        <div><span class="dot" style="background:#34d399"></span> ઓછો ટ્રાફિક (0-10)</div>
+        <div><span class="dot" style="background:#facc15"></span> મધ્યમ (11-25)</div>
+        <div><span class="dot" style="background:#ef4444"></span> વધારે (26+)</div>
+      </div>
+    </section>
+
+    <!-- EMERGENCY -->
+    <section id="page-emergency" class="page">
+      <div class="pad">
+        <h2>🚑 ઇમરજન્સી અલર્ટ</h2>
+        <p class="desc">સ્ટાર્ટ અને એન્ડ લોકેશન શોધ બોક્સ અથવા નકશા પર ક્લિકથી પસંદ કરો.</p>
+
+        <div class="card glass">
+          <div class="grid2">
+            <div>
+              <span class="field-label">સ્ટાર્ટ લોકેશન</span>
+              <input id="emStartTxt" placeholder="શહેર/ગામ અથવા નકશા પર ક્લિક" readonly>
+            </div>
+            <div>
+              <span class="field-label">એન્ડ લોકેશન</span>
+              <input id="emEndTxt" placeholder="શહેર/ગામ અથવા નકશા પર ક્લિક" readonly>
+            </div>
+          </div>
+          <div class="chips">
+            <span class="chip" id="pickStartBtn" onclick="setPickMode('start')">📍 સ્ટાર્ટ પસંદ કરો</span>
+            <span class="chip" id="pickEndBtn" onclick="setPickMode('end')">🏁 એન્ડ પસંદ કરો</span>
+          </div>
+          <div id="emap"></div>
+          <p class="note">ઉપરનો નકશો: પસંદ કરવાની બંને રીત કામ કરે — શોધ બોક્સ અથવા નકશા પર ક્લિક.</p>
+        </div>
+
+        <div class="card glass">
+          <h3>🛣️ લેન પસંદ કરો</h3>
+          <div class="chips" id="laneChips">
+            <span class="chip active" data-lane="Left">ડાબી (Left)</span>
+            <span class="chip" data-lane="Center">વચ્ચે (Center)</span>
+            <span class="chip" data-lane="Right">જમણી (Right)</span>
+          </div>
+          <h3 style="margin-top:12px">🎞️ એનિમેશન પસંદ કરો</h3>
+          <div class="chips" id="animChips">
+            <span class="chip active" data-anim="🚑">🚑 એમ્બ્યુલન્સ</span>
+            <span class="chip" data-anim="🚓">🚓 પોલીસ</span>
+            <span class="chip" data-anim="🚗">🚗 કાર</span>
+            <span class="chip" data-anim="🏍️">🏍️ બાઇક</span>
+            <span class="chip" data-anim="🚶">🚶 વ્યક્તિ</span>
+          </div>
+          <div class="stat">
+            <div class="box"><div class="n" id="etaDist">—</div><div class="l">અંતર (km)</div></div>
+            <div class="box"><div class="n" id="etaTime">—</div><div class="l">સમય (મિનિટ)</div></div>
+          </div>
+          <button class="btn danger" onclick="submitAlert()">અલર્ટ મોકલો</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CAMERA -->
+    <section id="page-camera" class="page">
+      <div class="pad">
+        <h2>📹 લાઇવ કેમેરા</h2>
+        <p class="desc">ફક્ત અધિકૃત ઓફિસર, સ્ટાફ અને એડમિન માટે. સામાન્ય યુઝર કેમેરો જોઈ શકતા નથી.</p>
+        <div class="card glass" id="camControls">
+          <span class="field-label">IP Webcam URL</span>
+          <input id="camUrl" placeholder="http://192.168.1.5:8080/video">
+          <div class="grid2">
+            <button class="btn" onclick="startCam()">કેમેરા ચાલુ કરો</button>
+            <button class="btn ghost" onclick="stopCam()">⏹️ બંધ કરો</button>
+          </div>
+        </div>
+        <div class="card glass" id="camListCard">
+          <h3>📷 ઉપલબ્ધ કેમેરા</h3>
+          <div class="list" id="camList"><div class="row">લોડ થાય છે...</div></div>
+        </div>
+        <img id="camFeed" class="hidden" alt="Live camera feed">
+      </div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="page-admin" class="page">
+      <div class="pad">
+        <h2>⚙️ માસ્ટર એડમિન પેનલ</h2>
+        <p class="desc">ઓફિસર, સ્ટાફ અને કેમેરા ઉમેરો તથા રજિસ્ટર્ડ યાદી જુઓ.</p>
+
+        <div class="card glass">
+          <h3>👮 ઓફિસર ઉમેરો</h3>
+          <div class="grid2">
+            <input id="ofName" placeholder="ઓફિસરનું નામ">
+            <input id="ofEmail" placeholder="officer@traffic.gov">
+          </div>
+          <input id="ofPw" placeholder="પાસવર્ડ (એડમિન નક્કી કરે; ખાલી રાખો તો રેન્ડમ)">
+          <button class="btn gold" onclick="addOfficer()">ઓફિસર ઉમેરો</button>
+        </div>
+
+        <div class="card glass">
+          <h3>🧑‍💼 સ્ટાફ ઉમેરો</h3>
+          <div class="grid2">
+            <input id="stName" placeholder="સ્ટાફનું નામ">
+            <input id="stEmail" placeholder="staff@traffic.gov">
+          </div>
+          <input id="stCamUrl" placeholder="IP Webcam URL (વૈકલ્પિક)">
+          <input id="stLoc" placeholder="લોકેશન (વૈકલ્પિક, દા.ત. Vav)">
+          <input id="stPw" placeholder="પાસવર્ડ (એડમિન નક્કી કરે; ખાલી રાખો તો રેન્ડમ)">
+          <button class="btn gold" onclick="addStaff()">સ્ટાફ ઉમેરો</button>
+        </div>
+
+        <div class="card glass">
+          <h3>📷 સ્ટાફ કેમેરા ઉમેરો</h3>
+          <div class="grid2">
+            <input id="camName" placeholder="કેમેરાનું નામ (Vav Chokdi Camera)">
+            <input id="camLoc" placeholder="લોકેશન (Vav)">
+          </div>
+          <input id="camUrlAdd" placeholder="http://192.168.1.5:8080/video">
+          <div class="grid2">
+            <input id="camLat" placeholder="Latitude (24.45)">
+            <input id="camLng" placeholder="Longitude (71.65)">
+          </div>
+          <button class="btn gold" onclick="addCamera()">કેમેરા ઉમેરો</button>
+        </div>
+
+        <div class="card glass">
+          <h3>📋 રજિસ્ટર્ડ ઓફિસર</h3>
+          <div class="list" id="listOfficers"><div class="row">લોડ થાય છે...</div></div>
+        </div>
+        <div class="card glass">
+          <h3>📋 રજિસ્ટર્ડ સ્ટાફ</h3>
+          <div class="list" id="listStaff"><div class="row">લોડ થાય છે...</div></div>
+        </div>
+        <div class="card glass">
+          <h3>📹 કેમેરા સ્ટેટસ</h3>
+          <div class="stat">
+            <div class="box"><div class="n" id="camTotal">0</div><div class="l">કુલ કેમેરા</div></div>
+            <div class="box"><div class="n" id="camActive">0</div><div class="l">સક્રિય (URL સેટ)</div></div>
+          </div>
+          <div class="list" id="listCams"><div class="row">લોડ થાય છે...</div></div>
+        </div>
+        <div class="card glass">
+          <h3>📋 નોંધાયેલા યુઝર</h3>
+          <div class="list" id="listUsers"><div class="row">લોડ થાય છે...</div></div>
+        </div>
+        <div class="card glass">
+          <h3>🚨 સક્રિય ઇમરજન્સી અલર્ટ</h3>
+          <div class="list" id="listAlerts"><div class="row">કોઈ સક્રિય અલર્ટ નથી</div></div>
+          <button class="btn ghost" style="margin-top:10px" onclick="clearAlerts()">બધા અલર્ટ સાફ કરો</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toasts"></div>
+<div id="modal" class="hidden"><div class="box glass">
+  <h3 id="modalTitle">—</h3><p id="modalText">—</p>
+  <div class="actions">
+    <button class="btn ghost" onclick="closeModal()">પછી</button>
+    <button class="btn" id="modalOk" onclick="closeModal()">બરાબર</button>
+  </div>
+</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+/* ============================================================
+   AI SMART TRAFFIC SYSTEM (GUJARAT)  — single file app
+   ============================================================ */
+
+/* ---------- 1. FIREBASE ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyDO0t3kuUt3Ie79KIuI6Jk32kbmdkHma1g",
+  authDomain: "nagrajmall.firebaseapp.com",
+  projectId: "nagrajmall",
+  storageBucket: "nagrajmall.firebasestorage.app",
+  messagingSenderId: "30402129603",
+  appId: "1:30402129603:web:8cc7c8b7902ed7bba3fc76",
+  measurementId: "G-QNTH1LXJ0P"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const FV = firebase.firestore.FieldValue;
+
+// Some networks (common in India) block Firestore's WebChannel/gRPC transport,
+// which makes reads hang forever (login stuck at "ચકાસી રહ્યું છે...").
+// Forcing long-polling avoids that hang.
+try{
+  db.settings({ experimentalForceLongPolling: true, ignoreUndefinedProperties: true });
+}catch(e){ console.warn('firestore settings', e); }
+
+// Reject a promise that does not settle in time, so login never hangs forever.
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
+  ]);
+}
+/* ---------- 2. GUJARAT CITIES ---------- */
+const GUJARAT_CITIES = {
+  "Ahmedabad": [23.0225, 72.5714], "Surat": [21.1702, 72.8311],
+  "Vadodara": [22.3072, 73.1812], "Rajkot": [22.3039, 70.8022],
+  "Bhavnagar": [21.7645, 72.1519], "Jamnagar": [22.4707, 70.0577],
+  "Junagadh": [21.5222, 70.4579], "Gandhinagar": [23.2156, 72.6369],
+  "Anand": [22.5645, 72.9289], "Nadiad": [22.6916, 72.8634],
+  "Mehsana": [23.5880, 72.3693], "Palanpur": [24.1741, 72.4321],
+  "Patan": [23.8500, 72.1167], "Vav": [24.4500, 71.6500],
+  "Tharad": [24.3960, 71.6250], "Bhuj": [23.2420, 69.6669],
+  "Gandhidham": [23.0753, 70.1337], "Morbi": [22.8173, 70.8377],
+  "Surendranagar": [22.7277, 71.6481], "Bharuch": [21.7051, 72.9959],
+  "Ankleshwar": [21.6266, 73.0016], "Navsari": [20.9467, 72.9520],
+  "Valsad": [20.5992, 72.9342], "Vapi": [20.3893, 72.9106],
+  "Porbandar": [21.6417, 69.6293], "Veraval": [20.9159, 70.3629],
+  "Amreli": [21.6031, 71.2220], "Botad": [22.1702, 71.6673],
+  "Dahod": [22.8379, 74.2531], "Godhra": [22.7780, 73.6141]
+};
+const GUJARAT_CENTER = [22.2587, 71.1924];
+
+/* ---------- 3. STATE ---------- */
+let map, emap;
+let tileNormal, tileSat, tileLabels;
+let trafficLayer, routeLayer;
+let userMarker, userAccuracy;
+let currentUser = JSON.parse(localStorage.getItem('sts_user') || 'null');
+let watchId = null, lastPos = null, firstFix = true;
+let simTimer = null;
+let camMarkers = [];
+let pickMode = null, pickStart = null, pickEnd = null;
+let selLane = 'Left', selAnim = '🚑';
+let alertUnsub = null, camerasCache = [];
+const notifiedAlerts = new Set();
+let deferredPrompt = null;
+
+/* ---------- 4. HELPERS ---------- */
+const $ = id => document.getElementById(id);
+function toast(msg, type){
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type || '');
+  t.textContent = msg;
+  $('toasts').appendChild(t);
+  setTimeout(() => t.remove(), type === 'alert' ? 6000 : 3200);
+}
+function showModal(title, text, onOk){
+  $('modalTitle').textContent = title;
+  $('modalText').textContent = text;
+  $('modal').classList.remove('hidden');
+  $('modalOk').onclick = () => { closeModal(); if(onOk) onOk(); };
+}
+function closeModal(){ $('modal').classList.add('hidden'); }
+function haversine(a, b){ // [lat,lng] pairs -> km
+  const R = 6371, toRad = d => d*Math.PI/180;
+  const dLat = toRad(b[0]-a[0]), dLng = toRad(b[1]-a[1]);
+  const s = Math.sin(dLat/2)**2 + Math.cos(toRad(a[0]))*Math.cos(toRad(b[0]))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+function nearestCityName(lat, lng){
+  let best = 'Custom Point', bd = 1e9;
+  for(const [name, c] of Object.entries(GUJARAT_CITIES)){
+    const d = haversine([lat,lng], c);
+    if(d < bd){ bd = d; best = name; }
+  }
+  return bd < 15 ? best : (best + ' area');
+}
+function randPw(){ return Math.random().toString(36).slice(2, 8); }
+function randomId(prefix){ return prefix + '-' + Math.floor(100 + Math.random()*900); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- 5. AUTH SCREENS ---------- */
+function showBox(which){
+  ['loginBox','registerBox','changepwBox'].forEach(b => $(b).classList.add('hidden'));
+  $({login:'loginBox', register:'registerBox', changepw:'changepwBox'}[which]).classList.remove('hidden');
+}
+
+/* Find a matching account in a collection by email/regNo + password */
+async function findAccount(coll, idf, pw, fallbackRole){
+  const snap = await withTimeout(db.collection(coll).get(), 15000);
+  let found = null;
+  snap.forEach(d => {
+    const u = d.data();
+    const email = (u.email || '').toLowerCase();
+    const reg = (u.regNo || '').toLowerCase();
+    if((email === idf || reg === idf) && String(u.password) === String(pw)){
+      found = Object.assign({ id: d.id, _coll: coll }, u, { role: u.role || fallbackRole });
+    }
+  });
+  return found;
+}
+
+let loginBusy = false;
+async function doLogin(){
+  if(loginBusy) return;
+  const idf = $('loginId').value.trim().toLowerCase();
+  const pw = $('loginPw').value;
+  if(!idf || !pw){ toast('ઈમેલ અને પાસવર્ડ ભરો', 'err'); return; }
+  loginBusy = true;
+  toast('ચકાસી રહ્યું છે...');
+  try{
+    let user = await findAccount('admins', idf, pw, 'admin');
+    if(!user) user = await findAccount('officers', idf, pw, 'police');
+    if(!user) user = await findAccount('staff', idf, pw, 'staff');
+    if(!user) user = await findAccount('users', idf, pw, 'user');
+    if(!user){ toast('ખોટો ઈમેલ અથવા પાસવર્ડ', 'err'); return; }
+    loginUser(user);
+  }catch(e){
+    console.error(e);
+    const code = (e && e.code) ? e.code : (e && e.message === 'TIMEOUT' ? 'timeout' : 'unknown');
+    if(code === 'timeout'){
+      toast('Firebase સુધી પહોંચી શકાયું નહીં (timeout). ઇન્ટરનેટ ચકાસો.', 'err');
+    }else if(String(code).indexOf('permission-denied') >= 0){
+      toast('Firestore Rules ઍક્સેસ રોકે છે — "allow read, write: if true" પબ્લિશ કરો.', 'err');
+    }else if(String(code).indexOf('failed-precondition') >= 0){
+      toast('Firestore Database બનાવેલી નથી — Console માં Create Database કરો.', 'err');
+    }else{
+      toast('કનેક્શન ભૂલ (' + code + ') — Firebase config/Rules ચકાસો.', 'err');
+    }
+  }finally{
+    loginBusy = false;
+  }
+}
+
+async function doRegister(){
+  const name = $('regName').value.trim();
+  const email = $('regEmail').value.trim().toLowerCase();
+  const phone = $('regPhone').value.trim();
+  const pw = $('regPw').value;
+  if(!name || !email || !pw){ toast('નામ, ઈમેલ અને પાસવર્ડ જરૂરી છે', 'err'); return; }
+  try{
+    const regNo = randomId('REG');
+    const ref = await db.collection('users').add({
+      name, email, phone, regNo, password: pw, role: 'user',
+      createdAt: FV.serverTimestamp()
+    });
+    toast('નોંધણી સફળ! તમારો ID: ' + regNo, 'ok');
+    loginUser({ id: ref.id, _coll: 'users', name, email, phone, regNo, password: pw, role: 'user' });
+  }catch(e){
+    console.error(e); toast('નોંધણી નિષ્ફળ — Rules ચકાસો', 'err');
+  }
+}
+
+async function doChangePw(){
+  const idf = $('cpId').value.trim().toLowerCase();
+  const a = $('cpNew').value, b = $('cpNew2').value;
+  if(!idf || !a){ toast('ઈમેલ અને નવો પાસવર્ડ ભરો', 'err'); return; }
+  if(a !== b){ toast('બંને પાસવર્ડ મળતા નથી', 'err'); return; }
+  try{
+    let target = null;
+    for(const coll of ['admins','officers','staff','users']){
+      const snap = await db.collection(coll).get();
+      snap.forEach(d => {
+        const u = d.data();
+        if((u.email||'').toLowerCase() === idf || (u.regNo||'').toLowerCase() === idf)
+          target = { coll, id: d.id };
+      });
+      if(target) break;
+    }
+    if(!target){ toast('એકાઉન્ટ મળ્યું નથી', 'err'); return; }
+    await db.collection(target.coll).doc(target.id).update({ password: a });
+    toast('પાસવર્ડ બદલાઈ ગયો', 'ok');
+    showBox('login');
+  }catch(e){ console.error(e); toast('પાસવર્ડ બદલી શકાયો નથી', 'err'); }
+}
+
+function loginUser(user){
+  currentUser = user;
+  localStorage.setItem('sts_user', JSON.stringify(user));
+  $('authScreen').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  buildUI();
+}
+function logout(){
+  localStorage.removeItem('sts_user');
+  if(watchId){ navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if(simTimer){ clearInterval(simTimer); simTimer = null; }
+  if(alertUnsub){ alertUnsub(); alertUnsub = null; }
+  if(routeLayer){ routeLayer.clearLayers(); }
+  currentUser = null;
+  $('app').classList.add('hidden');
+  $('authScreen').classList.remove('hidden');
+  showBox('login');
+}
+
+/* ---------- 6. UI BUILD ---------- */
+const ROLE_LABEL = { admin:'માસ્ટર એડમિન', police:'ઓફિસર / પોલીસ', staff:'સ્ટાફ', user:'યુઝર' };
+function buildUI(){
+  const role = currentUser.role;
+  $('roleBadge').textContent = (currentUser.name || 'User') + ' · ' + (ROLE_LABEL[role] || role);
+  $('roleBadge').className = 'badge ' + role;
+
+  // permissions
+  const can = {
+    emergency: role === 'admin' || role === 'police',
+    camera: role === 'admin' || role === 'police' || role === 'staff',
+    admin: role === 'admin'
+  };
+  document.querySelectorAll('#sidebar nav a').forEach(a => {
+    const p = a.getAttribute('data-page');
+    if(p !== 'home' && !can[p]) a.classList.add('hidden');
+    else a.classList.remove('hidden');
+  });
+
+  go('home');
+  initMap();
+  initEmergencyMap();
+  startGPS();
+  startTrafficSim();
+  listenAlerts();
+  if(can.admin) loadAdminLists();
+  if(can.camera) loadCameraList();
+  if(role === 'staff'){ registerStaffCamera(); autoStaffCamera(); }
+}
+
+function toggleSidebar(){ $('sidebar').classList.toggle('open'); }
+function go(page){
+  if(page !== 'home'){
+    const role = currentUser.role;
+    const allowed = page === 'emergency' ? (role==='admin'||role==='police')
+                  : page === 'camera' ? (role==='admin'||role==='police'||role==='staff')
+                  : page === 'admin' ? (role==='admin') : true;
+    if(!allowed){ toast('આ વિભાગ માટે પરવાનગી નથી', 'err'); return; }
+  }
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  $('page-' + page).classList.add('active');
+  document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.toggle('active', a.getAttribute('data-page') === page));
+  if(window.innerWidth <= 760) $('sidebar').classList.remove('open');
+  if(page === 'home' && map) setTimeout(() => map.invalidateSize(), 120);
+  if(page === 'emergency' && emap) setTimeout(() => emap.invalidateSize(), 120);
+  if(page === 'admin') loadAdminLists();
+}
+
+/* ---------- 7. MAP ---------- */
+function initMap(){
+  if(map) return;
+  map = L.map('map', { zoomControl:false, attributionControl:false }).setView(GUJARAT_CENTER, 7);
+
+  // custom pane so labels sit above tiles but below routes/markers
+  map.createPane('labelsPane');
+  map.getPane('labelsPane').style.zIndex = 350;
+
+  tileNormal = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 22, maxNativeZoom: 19
+  });
+  tileSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 22, maxNativeZoom: 19, crossOrigin: true
+  });
+  // labels overlay keeps satellite readable (and prevents "black" look while zooming)
+  tileLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+    maxZoom: 22, maxNativeZoom: 19, pane: 'labelsPane'
+  });
+  tileNormal.addTo(map);
+
+  trafficLayer = L.layerGroup().addTo(map);
+  routeLayer = L.layerGroup().addTo(map);
+
+  L.control.zoom({ position:'topright' }).addTo(map);
+}
+let satelliteOn = false;
+function toggleTiles(){
+  if(!map) return;
+  satelliteOn = !satelliteOn;
+  if(satelliteOn){
+    map.removeLayer(tileNormal);
+    tileSat.addTo(map); tileLabels.addTo(map);
+    toast('સેટેલાઇટ મોડ', 'ok');
+  }else{
+    map.removeLayer(tileSat); map.removeLayer(tileLabels);
+    tileNormal.addTo(map);
+    toast('સામાન્ય નકશો', 'ok');
+  }
+}
+
+/* GPS */
+function startGPS(){
+  if(!navigator.geolocation){ toast('GPS સપોર્ટ નથી', 'err'); return; }
+  watchId = navigator.geolocation.watchPosition(pos => {
+    const ll = [pos.coords.latitude, pos.coords.longitude];
+    lastPos = ll;
+    if(!userMarker){
+      userMarker = L.marker(ll, {
+        icon: L.divIcon({ className:'', html:'<div class="pulse-dot"></div>', iconSize:[16,16], iconAnchor:[8,8] }),
+        zIndexOffset: 1000
+      }).addTo(map).bindPopup('તમે અહીં છો');
+    }else{
+      userMarker.setLatLng(ll);
+    }
+    if(userAccuracy) map.removeLayer(userAccuracy);
+    userAccuracy = L.circle(ll, { radius: pos.coords.accuracy, color:'#38bdf8', weight:1, fillOpacity:.08 }).addTo(map);
+    if(firstFix){
+      firstFix = false;
+      map.flyTo(ll, 16, { duration: 1.2 });
+      if(currentUser && currentUser.role === 'staff') registerStaffCamera();
+    }
+  }, err => console.warn('GPS:', err.message), { enableHighAccuracy:true, maximumAge:5000, timeout:15000 });
+}
+function flyToMe(){
+  if(lastPos && map) map.flyTo(lastPos, 16, { duration: 1 });
+  else toast('GPS લોકેશન મળ્યું નથી', 'err');
+}
+
+/* Search */
+function doSearch(){
+  const q = $('searchInput').value.trim().toLowerCase();
+  if(!q) return;
+  const hit = Object.keys(GUJARAT_CITIES).find(c => c.toLowerCase().includes(q));
+  if(!hit){ toast('શહેર/ગામ મળ્યું નથી', 'err'); return; }
+  map.flyTo(GUJARAT_CITIES[hit], 14, { duration: 1.2 });
+  toast(hit + ' પર જઈ રહ્યું છે', 'ok');
+}
+
+/* ---------- 8. TRAFFIC DENSITY (SIMULATION) ---------- */
+function densityColor(n){ return n <= 10 ? '#34d399' : n <= 25 ? '#facc15' : '#ef4444'; }
+async function startTrafficSim(){
+  try{
+    const snap = await db.collection('staff_cameras').get();
+    camerasCache = [];
+    snap.forEach(d => camerasCache.push(Object.assign({ id:d.id }, d.data())));
+  }catch(e){ console.warn('cameras load', e); }
+  renderTraffic();
+  if(simTimer) clearInterval(simTimer);
+  simTimer = setInterval(renderTraffic, 6000);
+}
+function renderTraffic(){
+  if(!map || !trafficLayer) return;
+  trafficLayer.clearLayers();
+  camerasCache.forEach(cam => {
+    if(cam.lat == null || cam.lng == null) return;
+    const count = Math.floor(1 + Math.random()*50);
+    const col = densityColor(count);
+    L.circleMarker([cam.lat, cam.lng], {
+      radius: 12 + Math.min(count,50)/4, color: col, weight: 2,
+      fillColor: col, fillOpacity: .35
+    }).bindPopup('<b>' + esc(cam.name||'Camera') + '</b><br>' + esc(cam.location||'') +
+                 '<br>વાહન: ' + count + ' (' + (count<=10?'ઓછો':count<=25?'મધ્યમ':'વધારે') + ')')
+      .addTo(trafficLayer);
+  });
+}
+
+/* ---------- 9. EMERGENCY ---------- */
+function initEmergencyMap(){
+  if(emap) return;
+  emap = L.map('emap', { attributionControl:false }).setView(GUJARAT_CENTER, 7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:22, maxNativeZoom:19 }).addTo(emap);
+  emap.on('click', e => {
+    if(pickMode === 'start'){ pickStart = [e.latlng.lat, e.latlng.lng]; $('emStartTxt').value = nearestCityName(e.latlng.lat, e.latlng.lng); }
+    else if(pickMode === 'end'){ pickEnd = [e.latlng.lat, e.latlng.lng]; $('emEndTxt').value = nearestCityName(e.latlng.lat, e.latlng.lng); }
+    else { toast('પહેલા સ્ટાર્ટ/એન્ડ બટન દબાવો'); return; }
+    setPickMode(null); refreshPickMarkers(); updateETA();
+  });
+
+  // lane + animation chips
+  document.querySelectorAll('#laneChips .chip').forEach(c => c.onclick = () => {
+    document.querySelectorAll('#laneChips .chip').forEach(x => x.classList.remove('active'));
+    c.classList.add('active'); selLane = c.dataset.lane;
+  });
+  document.querySelectorAll('#animChips .chip').forEach(c => c.onclick = () => {
+    document.querySelectorAll('#animChips .chip').forEach(x => x.classList.remove('active'));
+    c.classList.add('active'); selAnim = c.dataset.anim;
+  });
+}
+function setPickMode(mode){
+  pickMode = mode;
+  $('pickStartBtn').classList.toggle('active', mode === 'start');
+  $('pickEndBtn').classList.toggle('active', mode === 'end');
+  if(mode) toast(mode === 'start' ? 'નકશા પર સ્ટાર્ટ પસંદ કરો' : 'નકશા પર એન્ડ પસંદ કરો');
+}
+let pickMarkers = [];
+function refreshPickMarkers(){
+  pickMarkers.forEach(m => emap.removeLayer(m));
+  pickMarkers = [];
+  if(pickStart) pickMarkers.push(L.marker(pickStart).addTo(emap).bindPopup('સ્ટાર્ટ'));
+  if(pickEnd) pickMarkers.push(L.marker(pickEnd).addTo(emap).bindPopup('એન્ડ'));
+  if(pickStart && pickEnd){
+    L.polyline([pickStart, pickEnd], { color:'#ef4444', weight:3, dashArray:'6 6' }).addTo(emap);
+    emap.fitBounds([pickStart, pickEnd], { padding:[40,40] });
+  }
+}
+function updateETA(){
+  if(!(pickStart && pickEnd)){ $('etaDist').textContent = '—'; $('etaTime').textContent = '—'; return; }
+  const km = haversine(pickStart, pickEnd);
+  const speed = 40; // km/h city average
+  $('etaDist').textContent = km.toFixed(2);
+  $('etaTime').textContent = Math.max(1, Math.round(km/speed*60));
+}
+async function submitAlert(){
+  if(!(pickStart && pickEnd)){ toast('સ્ટાર્ટ અને એન્ડ બંને પસંદ કરો', 'err'); return; }
+  try{
+    await db.collection('emergency_alerts').add({
+      start: { lat: pickStart[0], lng: pickStart[1], name: $('emStartTxt').value },
+      end: { lat: pickEnd[0], lng: pickEnd[1], name: $('emEndTxt').value },
+      lane: selLane, animation: selAnim, status:'active',
+      by: currentUser.name || 'Officer',
+      timestamp: FV.serverTimestamp()
+    });
+    toast('અલર્ટ મોકલાઈ ગયો', 'ok');
+    // local notification if user is within 500m of start
+    if(lastPos && haversine(lastPos, pickStart) < 0.5) notifyNearby();
+  }catch(e){ console.error(e); toast('અલર્ટ મોકલી શકાયો નથી', 'err'); }
+}
+function notifyNearby(){
+  toast('🚨 સાઈડમાં રહો — ઇમરજન્સી વાહન નજીક છે!', 'alert');
+  try{
+    if('Notification' in window && Notification.permission === 'granted')
+      new Notification('AI Smart Traffic', { body:'સાઈડમાં રહો — ઇમરજન્સી વાહન નજીક છે' });
+  }catch(e){}
+}
+
+/* Live alerts on the main map for everyone */
+function listenAlerts(){
+  if(alertUnsub) alertUnsub();
+  alertUnsub = db.collection('emergency_alerts').where('status','==','active')
+    .onSnapshot(snap => {
+      routeLayer.clearLayers();
+      const activeIds = new Set();
+      snap.forEach(d => {
+        const a = d.data();
+        if(!a.start || !a.end) return;
+        activeIds.add(d.id);
+        const s = [a.start.lat, a.start.lng], e2 = [a.end.lat, a.end.lng];
+        const off = laneOffset(s, e2, a.lane);
+        const p1 = off.p1, p2 = off.p2;
+        L.polyline([p1, p2], { color:'#ef4444', weight:6, opacity:.9, className:'blink' })
+          .addTo(routeLayer).bindPopup('<b>ઇમરજન્સી રૂટ</b><br>' + esc(a.animation||'') + ' · લેન: ' + esc(a.lane||''));
+        animateVehicle(p1, p2, a.animation || '🚑', d.id);
+        // nearby notification
+        if(lastPos && !notifiedAlerts.has(d.id) && haversine(lastPos, s) < 0.5){
+          notifiedAlerts.add(d.id);
+          if(currentUser && currentUser.role !== 'admin' && currentUser.role !== 'police') notifyNearby();
+        }
+      });
+      Object.keys(animMarkers).forEach(k => { if(!activeIds.has(k)){ map.removeLayer(animMarkers[k]); delete animMarkers[k]; } });
+      if(currentUser && currentUser.role === 'admin') renderAlertList(snap);
+    }, err => console.warn('alerts', err));
+}
+function laneOffset(p1, p2, lane){
+  // small perpendicular shift so lane choice is visible
+  const dLat = p2[0]-p1[0], dLng = p2[1]-p1[1];
+  const len = Math.hypot(dLat, dLng) || 1e-6;
+  const shift = lane === 'Center' ? 0 : lane === 'Left' ? 0.0016 : -0.0016;
+  const px = -dLng/len*shift, py = dLat/len*shift;
+  return { p1:[p1[0]+py, p1[1]+px], p2:[p2[0]+py, p2[1]+px] };
+}
+const animMarkers = {};
+function animateVehicle(p1, p2, emoji, id){
+  let m = animMarkers[id];
+  if(!m){
+    m = L.marker(p1, { icon: L.divIcon({ className:'', html:'<div style="font-size:26px">'+emoji+'</div>', iconSize:[26,26], iconAnchor:[13,13] }) }).addTo(map);
+    animMarkers[id] = m;
+    const state = { t: 0 };
+    m._state = state;
+    const step = () => {
+      if(!animMarkers[id]) return;
+      state.t += 0.006; if(state.t > 1) state.t = 0;
+      const lat = p1[0] + (p2[0]-p1[0])*state.t;
+      const lng = p1[1] + (p2[1]-p1[1])*state.t;
+      m.setLatLng([lat, lng]);
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }else{
+    m.setLatLng(p1);
+    m.setIcon(L.divIcon({ className:'', html:'<div style="font-size:26px">'+emoji+'</div>', iconSize:[26,26], iconAnchor:[13,13] }));
+  }
+}
+function renderAlertList(snap){
+  const box = $('listAlerts'); if(!box) return;
+  box.innerHTML = '';
+  let n = 0;
+  snap.forEach(d => {
+    const a = d.data(); n++;
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = '<b>' + esc(a.animation||'') + ' ' + esc(a.start.name||'') + ' → ' + esc(a.end.name||'') + '</b>' +
+      '<span class="meta">લેન: ' + esc(a.lane||'') + '<br>' + esc(a.by||'') + '</span>';
+    box.appendChild(row);
+  });
+  if(!n) box.innerHTML = '<div class="row">કોઈ સક્રિય અલર્ટ નથી</div>';
+}
+async function clearAlerts(){
+  try{
+    const snap = await db.collection('emergency_alerts').where('status','==','active').get();
+    const batch = db.batch();
+    snap.forEach(d => batch.update(d.ref, { status:'cleared' }));
+    await batch.commit();
+    Object.keys(animMarkers).forEach(k => { map.removeLayer(animMarkers[k]); delete animMarkers[k]; });
+    toast('બધા અલર્ટ સાફ થયા', 'ok');
+  }catch(e){ toast('સાફ કરી શકાયું નથી', 'err'); }
+}
+
+/* ---------- 10. CAMERA ---------- */
+async function loadCameraList(){
+  try{
+    const snap = await db.collection('staff_cameras').get();
+    const box = $('camList'); box.innerHTML = '';
+    if(snap.empty){ box.innerHTML = '<div class="row">કોઈ કેમેરા ઉમેરાયો નથી</div>'; return; }
+    snap.forEach(d => {
+      const c = d.data();
+      const row = document.createElement('div'); row.className = 'row';
+      row.innerHTML = '<b>' + esc(c.name||'Camera') + '</b><span class="meta">' + esc(c.location||'') + '</span>';
+      row.style.cursor = 'pointer';
+      row.onclick = () => { $('camUrl').value = c.url || ''; startCam(); };
+      box.appendChild(row);
+    });
+  }catch(e){ console.warn(e); }
+}
+function startCam(){
+  const url = $('camUrl').value.trim();
+  if(!url){ toast('IP Webcam URL ભરો', 'err'); return; }
+  const feed = $('camFeed');
+  feed.src = url;
+  feed.classList.remove('hidden');
+  feed.onerror = () => toast('કેમેરા ફીડ ખૂલી શક્યું નથી — URL/IP ચકાસો', 'err');
+  toast('કેમેરા ચાલુ થઈ રહ્યો છે', 'ok');
+}
+function stopCam(){
+  const feed = $('camFeed');
+  feed.src = ''; feed.classList.add('hidden');
+  toast('કેમેરા બંધ', 'ok');
+}
+async function autoStaffCamera(){
+  try{
+    if(currentUser.cameraUrl){ $('camUrl').value = currentUser.cameraUrl; }
+    else{
+      const snap = await db.collection('staff_cameras').limit(1).get();
+      if(!snap.empty){ const c = snap.docs[0].data(); $('camUrl').value = c.url || ''; }
+    }
+    if($('camUrl').value){ go('camera'); startCam(); }
+  }catch(e){ console.warn(e); }
+}
+async function registerStaffCamera(){
+  if(!currentUser || currentUser.role !== 'staff') return;
+  const loc = (lastPos && lastPos.length === 2) ? lastPos : null;
+  const docId = 'staff-' + currentUser.id;
+  const data = {
+    name: (currentUser.name || 'Staff') + ' Camera',
+    location: currentUser.location || currentUser.regNo || 'Staff',
+    url: currentUser.cameraUrl || '',
+    lat: (currentUser.lat != null) ? currentUser.lat : (loc ? loc[0] : GUJARAT_CENTER[0]),
+    lng: (currentUser.lng != null) ? currentUser.lng : (loc ? loc[1] : GUJARAT_CENTER[1]),
+    staffId: currentUser.id, auto: true, updatedAt: FV.serverTimestamp()
+  };
+  try{
+    const ref = db.collection('staff_cameras').doc(docId);
+    const existing = await ref.get();
+    if(existing.exists) await ref.update(data);
+    else await ref.set(data);
+    startTrafficSim();
+  }catch(e){ console.warn('staff camera register', e); }
+}
+
+/* ---------- 11. ADMIN ---------- */
+async function addOfficer(){
+  const name = $('ofName').value.trim(), email = $('ofEmail').value.trim().toLowerCase();
+  if(!name || !email){ toast('નામ અને ઈમેલ ભરો', 'err'); return; }
+  try{
+    const regNo = randomId('OFF'); const pw = $('ofPw').value.trim() || randPw();
+    await db.collection('officers').add({ name, email, regNo, password: pw, role:'police', createdAt: FV.serverTimestamp() });
+    showModal('ઓફિસર ઉમેરાયો ✅', 'ID: ' + regNo + '\nપાસવર્ડ: ' + pw + '\n\nઆ માહિતી ઓફિસરને આપો.');
+    $('ofName').value = ''; $('ofEmail').value = ''; $('ofPw').value = '';
+    loadAdminLists();
+  }catch(e){ console.error(e); toast('ઓફિસર ઉમેરી શકાયો નથી', 'err'); }
+}
+async function addStaff(){
+  const name = $('stName').value.trim(), email = $('stEmail').value.trim().toLowerCase();
+  const cameraUrl = $('stCamUrl').value.trim();
+  const location = $('stLoc').value.trim();
+  if(!name || !email){ toast('નામ અને ઈમેલ ભરો', 'err'); return; }
+  try{
+    const regNo = randomId('STAFF'); const pw = $('stPw').value.trim() || randPw();
+    await db.collection('staff').add({ name, email, regNo, password: pw, role:'staff', cameraUrl, location, createdAt: FV.serverTimestamp() });
+    showModal('સ્ટાફ ઉમેરાયો ✅', 'ID: ' + regNo + '\nપાસવર્ડ: ' + pw + '\n\nજ્યારે સ્ટાફ પોતાના ફોનથી લોગિન કરશે, તેનો કેમેરો આપમેળે નોંધાઈ જશે.');
+    $('stName').value = ''; $('stEmail').value = ''; $('stCamUrl').value = ''; $('stLoc').value = ''; $('stPw').value = '';
+    loadAdminLists();
+  }catch(e){ console.error(e); toast('સ્ટાફ ઉમેરી શકાયો નથી', 'err'); }
+}
+async function addCamera(){
+  const name = $('camName').value.trim(), location = $('camLoc').value.trim(), url = $('camUrlAdd').value.trim();
+  let lat = parseFloat($('camLat').value), lng = parseFloat($('camLng').value);
+  if(!name || !url){ toast('નામ અને URL ભરો', 'err'); return; }
+  if(isNaN(lat) || isNaN(lng)){
+    const c = GUJARAT_CITIES[location] || null;
+    if(c){ lat = c[0]; lng = c[1]; }
+    else { lat = GUJARAT_CENTER[0]; lng = GUJARAT_CENTER[1]; }
+  }
+  try{
+    await db.collection('staff_cameras').add({ name, location, url, lat, lng, createdAt: FV.serverTimestamp() });
+    toast('કેમેરા ઉમેરાયો', 'ok');
+    $('camName').value = ''; $('camLoc').value = ''; $('camUrlAdd').value = ''; $('camLat').value = ''; $('camLng').value = '';
+    startTrafficSim(); loadAdminLists();
+  }catch(e){ console.error(e); toast('કેમેરા ઉમેરી શકાયો નથી', 'err'); }
+}
+async function loadAdminLists(){
+  if(!currentUser || currentUser.role !== 'admin') return;
+  const fill = async (coll, box, extra) => {
+    try{
+      const snap = await db.collection(coll).get();
+      const el = $(box); el.innerHTML = '';
+      if(snap.empty){ el.innerHTML = '<div class="row">કોઈ નોંધ નથી</div>'; return; }
+      snap.forEach(d => {
+        const u = d.data();
+        const row = document.createElement('div'); row.className = 'row';
+        row.innerHTML = '<b>' + esc(u.name||'—') + '</b><span class="meta">' + esc(u.regNo||'') + '<br>' + esc(u.email||'') + (extra?'<br>'+esc(extra(u)):'') + '</span>';
+        el.appendChild(row);
+      });
+    }catch(e){ $(box).innerHTML = '<div class="row">લોડ થઈ શક્યું નથી</div>'; }
+  };
+  fill('officers', 'listOfficers');
+  fill('staff', 'listStaff');
+  fill('users', 'listUsers');
+  loadAdminCameras();
+}
+async function loadAdminCameras(){
+  const box = $('listCams'); if(!box) return;
+  try{
+    const results = await Promise.all([
+      db.collection('staff_cameras').get(),
+      db.collection('staff').get()
+    ]);
+    const camsSnap = results[0], staffSnap = results[1];
+    const staffName = {};
+    staffSnap.forEach(d => { const u = d.data(); staffName[d.id] = u.name || u.regNo || 'Staff'; });
+    box.innerHTML = '';
+    let total = 0, active = 0;
+    camsSnap.forEach(d => {
+      const c = d.data(); total++;
+      const isActive = !!c.url; if(isActive) active++;
+      const owner = c.staffId ? (staffName[c.staffId] || 'Staff') : '—';
+      const row = document.createElement('div'); row.className = 'row';
+      row.innerHTML = '<b>' + esc(c.name || 'Camera') + '</b>' +
+        '<span class="meta">સ્ટાફ: ' + esc(owner) + '<br>' + esc(c.location || '') +
+        ' · ' + (isActive ? '🟢 સક્રિય' : '⚪ URL નથી') + '</span>';
+      box.appendChild(row);
+    });
+    if(!total) box.innerHTML = '<div class="row">કોઈ કેમેરા નોંધાયો નથી</div>';
+    $('camTotal').textContent = total;
+    $('camActive').textContent = active;
+  }catch(e){ box.innerHTML = '<div class="row">લોડ થઈ શક્યું નથી</div>'; }
+}
+
+/* ---------- 12. BOOTSTRAP (seed master admin) ---------- */
+async function bootstrap(){
+  try{
+    // Seed master admin into Firestore (login is Firestore-based, not hardcoded in UI)
+    const admins = await withTimeout(db.collection('admins').limit(1).get(), 15000);
+    if(admins.empty){
+      await db.collection('admins').add({
+        name:'Master Admin', email:'admin@traffic.gov', regNo:'ADMIN-001',
+        password:'admin123', role:'admin', createdAt: FV.serverTimestamp()
+      });
+      console.log('Seeded master admin');
+    }
+  }catch(e){
+    console.warn('Bootstrap skipped (check Firestore rules):', e.message);
+  }
+}
+
+/* ---------- 13. PWA ---------- */
+function makeIcon(size){
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d');
+  x.fillStyle = '#0a0f1c'; x.fillRect(0, 0, size, size);
+  x.fillStyle = '#38bdf8'; x.font = (size*0.55) + 'px serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText('🚦', size/2, size*0.54);
+  return c.toDataURL('image/png');
+}
+function setupPWA(){
+  try{
+    const manifest = {
+      name:'AI Smart Traffic System', short_name:'Smart Traffic', start_url:'.', scope:'.',
+      display:'standalone', background_color:'#0a0f1c', theme_color:'#38bdf8',
+      description:'ગુજરાત સ્માર્ટ ટ્રાફિક મેનેજમેન્ટ સિસ્ટમ',
+      icons:[ { src: makeIcon(192), sizes:'192x192', type:'image/png' },
+              { src: makeIcon(512), sizes:'512x512', type:'image/png' } ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type:'application/manifest+json' });
+    const link = document.createElement('link');
+    link.rel = 'manifest'; link.href = URL.createObjectURL(blob);
+    document.head.appendChild(link);
+  }catch(e){ console.warn('manifest', e); }
+
+  // Service worker (best-effort; browsers may block blob SW registration)
+  if('serviceWorker' in navigator){
+    try{
+      const swCode = "self.addEventListener('install',e=>self.skipWaiting());" +
+                     "self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));" +
+                     "self.addEventListener('fetch',e=>{});";
+      const swBlob = new Blob([swCode], { type:'text/javascript' });
+      navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+    }catch(e){ /* ignore */ }
+  }
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault(); deferredPrompt = e;
+  });
+  // Auto install popup after 3 seconds
+  setTimeout(() => {
+    if(deferredPrompt){
+      showModal('એપ ઇન્સ્ટોલ કરો?', 'AI Smart Traffic ને Home Screen પર ઉમેરો.',
+        () => { deferredPrompt.prompt(); deferredPrompt = null; });
+    }
+  }, 3000);
+
+  // ask notification permission once
+  try{ if('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); }catch(e){}
+}
+
+/* ---------- 14. START ---------- */
+window.addEventListener('load', () => {
+  setupPWA();
+  if(location.protocol === 'file:'){
+    setTimeout(() => showModal('⚠️ file:// થી ચાલી રહ્યું છે',
+      'Firebase browser માં file:// થી સારી રીતે કામ કરતું નથી — લોગિન hang થઈ શકે છે. index.html ને localhost સર્વર કે hosting (Firebase Hosting / GitHub Pages) થી ખોલો.'), 900);
+  }
+  bootstrap().then(() => {
+    if(currentUser && currentUser.role) loginUser(currentUser);
+  });
+});
+</script>
+</body>
+</html>
